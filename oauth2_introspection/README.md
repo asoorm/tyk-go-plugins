@@ -53,7 +53,7 @@ Ensure that the API definition does not strip the access_token, and configure th
   "custom_middleware": {
     "post_key_auth": [{
       "name": "OAuth2Introspect",
-      "path": "/Users/ahmet/go/src/github.com/TykTechnologies/tyk/go_custom_plugins/oauth2_introspection/oauth2_introspection.so"
+      "path": "SOMEDIRECTORY/oauth2_introspection/oauth2_introspection.so"
     }],
   "driver": "goplugin",
 }
