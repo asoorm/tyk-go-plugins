@@ -61,11 +61,12 @@ Ensure that the API definition does not strip the access_token, and configure th
 
 This plugin will then strip the token to ensure that it doesn't leak upstream.
 
-If there are any scopes present in the access token, they will be inserted into the request context for use later in the 
-middleware chain.
+If there is a scope object returned in the introspection response, this will be injected into the 
+`X-Tyk-Plugin-Oauth2Introspect-Scope` request header. It may be useful for the upstream service, or a middleware
+further down the request chain.
 
-## TODO / Current Limitations
+## Maybe TODO / Current Limitations
 
 - [ ] Build internal configurable cache to not spam the introspection endpoint.
-- [ ] Hardcoded to only introspect the `access_token`.
+- [ ] Hardcoded to only introspect the `access_token`. We do not introspect the `refresh_token`.
 - [ ] Hardcoded to only look in the `authorization` header for the `access_token`

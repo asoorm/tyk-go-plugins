@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -106,8 +105,7 @@ func OAuth2Introspect(w http.ResponseWriter, r *http.Request) {
 	// whilst we are here - let's get the scopes and inject them into the request context
 	// they may be useful later
 	if irObj.Scope != nil {
-		ctx := context.WithValue(r.Context(), "oauth2.scope", *irObj.Scope)
-		r = r.WithContext(ctx)
+		r.Header.Set("X-Tyk-Plugin-OAuth2Introspect-Scope", *irObj.Scope)
 	}
 
 	// strip the access token
