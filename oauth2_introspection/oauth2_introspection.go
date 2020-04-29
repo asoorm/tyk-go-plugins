@@ -28,12 +28,14 @@ func init() {
 	authorizationHeaderValue = os.Getenv("OAUTH2_INTROSPECT_AUTHORIZATION")
 }
 
+// Compile Plugin: go build -buildmode=plugin -o ./tyk_go_plugins/oauth2_introspection/oauth2_introspection.so ./tyk_go_plugins/oauth2_introspection
+// Compile Gateway: go install -tags 'goplugin'
+
 func OAuth2Introspect(w http.ResponseWriter, r *http.Request) {
 	bearerToken := accessTokenFromRequest(r)
 	if bearerToken == "" {
 		introspectLogger.Debug("no bearer token found in request")
-		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(http.StatusText(http.StatusUnauthorized)))
+		writeUnauthorized(w)
 		return
 	}
 
@@ -43,8 +45,7 @@ func OAuth2Introspect(w http.ResponseWriter, r *http.Request) {
 	introspectionReq, err := http.NewRequest(http.MethodPost, introspectionEndpoint, strings.NewReader(data.Encode()))
 	if err != nil {
 		introspectLogger.Errorf("unable to create new request %s", err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(http.StatusText(http.StatusInternalServerError)))
+		writeInternalServerError(w)
 		return
 	}
 
@@ -54,7 +55,7 @@ func OAuth2Introspect(w http.ResponseWriter, r *http.Request) {
 	introspectionRes, err := introspectionClient.Do(introspectionReq)
 	if err != nil {
 		introspectLogger.Errorf("tyk cannot connect to the authorization server %s\n", err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
+		writeInternalServerError(w)
 		return
 	}
 	if introspectionRes.StatusCode == http.StatusUnauthorized {
@@ -69,23 +70,23 @@ func OAuth2Introspect(w http.ResponseWriter, r *http.Request) {
 		//   HTTP 401 code as described in Section 3 of OAuth 2.0 Bearer Token
 		//   Usage [RFC6750].
 		introspectLogger.Errorf("tyk is not authorized to perform introspection")
-		w.WriteHeader(http.StatusInternalServerError)
+		writeInternalServerError(w)
 		return
 	}
 	defer introspectionRes.Body.Close()
 
 	body, err := ioutil.ReadAll(introspectionRes.Body)
 	if err != nil {
-		introspectLogger.Errorf("unable to read response body from authorization server %s")
-		w.WriteHeader(http.StatusInternalServerError)
+		introspectLogger.Errorf("unable to read response body from authorization server %s", err.Error())
+		writeInternalServerError(w)
 		return
 	}
 
 	irObj := &IntrospectResponse{}
 	err = json.Unmarshal(body, irObj)
 	if err != nil {
-		introspectLogger.Errorf("unable to read json response from authorization server %s")
-		w.WriteHeader(http.StatusInternalServerError)
+		introspectLogger.Errorf("unable to read json response from authorization server %s", err.Error())
+		writeInternalServerError(w)
 		return
 	}
 	if irObj.Active == false {
@@ -98,7 +99,7 @@ func OAuth2Introspect(w http.ResponseWriter, r *http.Request) {
 		//   authorization server SHOULD NOT include any additional information
 		//   about an inactive token, including why the token is inactive.
 		introspectLogger.Debug("access_token is inactive")
-		w.WriteHeader(http.StatusUnauthorized)
+		writeUnauthorized(w)
 		return
 	}
 
@@ -125,6 +126,16 @@ func accessTokenFromRequest(r *http.Request) string {
 	}
 
 	return split[1]
+}
+
+func writeUnauthorized(w http.ResponseWriter) {
+	w.WriteHeader(http.StatusUnauthorized)
+	w.Write([]byte(http.StatusText(http.StatusUnauthorized)))
+}
+
+func writeInternalServerError(w http.ResponseWriter) {
+	w.WriteHeader(http.StatusInternalServerError)
+	w.Write([]byte(http.StatusText(http.StatusInternalServerError)))
 }
 
 func main() {}
