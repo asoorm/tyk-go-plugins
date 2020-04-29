@@ -70,3 +70,4 @@ further down the request chain.
 - [ ] Build internal configurable cache to not spam the introspection endpoint.
 - [ ] Hardcoded to only introspect the `access_token`. We do not introspect the `refresh_token`.
 - [ ] Hardcoded to only look in the `authorization` header for the `access_token`
+- [ ] Pull in introspection configuration from the API Definition `config_data` object to make runtime dynamic.
