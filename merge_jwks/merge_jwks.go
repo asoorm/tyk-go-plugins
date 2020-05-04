@@ -1,5 +1,8 @@
 package main
 
+// Compile Plugin: go build -buildmode=plugin -o ./build/merge_jwks.so .
+// Compile Gateway: go install -tags 'goplugin'
+
 import (
 	"bytes"
 	"crypto/rsa"
@@ -145,7 +148,7 @@ func getJWKSfromAPiDef(configData map[string]interface{}) ([]string, error) {
 		return nil, err
 	}
 
-	return jwkViper.GetStringSlice("jwks"), nil
+	return jwkViper.GetStringSlice("merge_jwks"), nil
 }
 
 // a struct to hold the result from each request including an index

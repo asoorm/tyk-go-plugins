@@ -2,6 +2,16 @@
 
 > This plugin is experimental
 
+## Compilation
+
+```text
+# Compile Plugin: 
+go build -buildmode=plugin -o ./build/merge_jwks.so .
+
+# Compile Gateway:
+go install -tags 'goplugin'
+```
+
 [6.3.1.1. "n" (modulus) parameter](https://tools.ietf.org/html/rfc7518#section-6.3.1.1)
 ```text
 The "n" (modulus) parameter contains the modulus value for the RSA
