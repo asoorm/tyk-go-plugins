@@ -1,0 +1,11 @@
+# address you want the service to listen on
+address: ":9000"
+
+# the jwks path endpoint you wish to expose
+jwks_uri: "/certs"
+
+merge:
+
+# examples:
+#  - "https://{oktaorg}.okta.com/oauth2/default/v1/keys"
+#  - "https://{keycloak-host}/auth/realms/{keycloak-realm}/protocol/openid-connect/certs"
