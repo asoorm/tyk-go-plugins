@@ -1,8 +1,5 @@
 package main
 
-// Compile Plugin: go build -buildmode=plugin -o ./build/merge_jwks.so .
-// Compile Gateway: go install -tags 'goplugin'
-
 import (
 	"bytes"
 	"crypto/rsa"
@@ -10,22 +7,19 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"runtime"
 	"sort"
 	"strings"
 	"time"
 
-	"github.com/TykTechnologies/tyk/ctx"
-	"github.com/TykTechnologies/tyk/log"
 	"github.com/patrickmn/go-cache"
 	"github.com/spf13/viper"
 	"github.com/square/go-jose"
-)
-
-var (
-	jwksLogger = log.Get()
 )
 
 type jwksTmpl struct {
@@ -43,40 +37,77 @@ type jsonWebKeys struct {
 }
 
 var (
-	goCache = cache.New(60*time.Minute, time.Minute)
+	db = cache.New(60*time.Minute, time.Minute)
 )
 
-func MergeJWKS(w http.ResponseWriter, r *http.Request) {
-	configData := ctx.GetDefinition(r).ConfigData
-	uris, err := getJWKSfromAPiDef(configData)
-	if err != nil {
-		writeInternalServerError(w, err)
+type conf struct {
+	Address string   `mapstructure:"address"`
+	JWKSUri string   `mapstructure:"jwks_uri"`
+	Merge   []string `mapstructure:"merge"`
+}
+
+func main() {
+	vConf := viper.New()
+	vConf.SetConfigType("yaml")
+	vConf.SetConfigFile("config.yaml")
+	err := vConf.ReadInConfig()
+	fatalOnError(err, "unable to read config file")
+
+	appConf := &conf{}
+	err = vConf.Unmarshal(appConf)
+	fatalOnError(err, "unable to unmarshal config file")
+
+	if len(appConf.Merge) == 0 {
+		fatalOnError(errors.New("no jwks_uris in merge array"), "merge array validation error")
 	}
 
-	// TODO: there is definitely more efficient way to do this. Time permitting, will fix up
-	// e.g. we could cache by issuer & kid from the JWT, then only pull the jwks from specific issuer
+	http.Handle(appConf.JWKSUri, MergeJWKSHandler(appConf.Merge))
+
+	writeLog("starting server on: %s", appConf.Address)
+	err = http.ListenAndServe(":9000", nil)
+	fatalOnError(err, "unable to start listener")
+}
+
+func fatalOnError(err error, format string, args ...interface{}) {
+	if err != nil {
+		writeLog(format+": %s", append(args, err.Error())...)
+		os.Exit(1)
+	}
+}
+
+func writeLog(format string, args ...interface{}) {
+	if len(args) == 0 {
+		_, _ = fmt.Fprint(os.Stdout, format+"\n")
+		return
+	}
+
+	_, _ = fmt.Fprintf(os.Stdout, format+"\n", args...)
+}
+
+func MergeJWKSHandler(jwksUris []string) http.HandlerFunc {
+
 	var mergedJWKSObject jsonWebKeys
-	jwksUri, found := goCache.Get("jwks_uri")
+	jwksUri, found := db.Get("jwks_uri")
 	if !found {
 		// limit concurrency to the number of CPUs
-		resultArray := boundedParallelGet(uris, runtime.NumCPU())
+		resultArray := boundedParallelGet(jwksUris, runtime.NumCPU())
 
 		for _, result := range resultArray {
 			if result.err != nil {
 				// log the error and continue to the next one
-				jwksLogger.Errorf("one of the jwks endpoints failed, skipping: %s", result.err.Error())
+				writeLog("one of the jwks endpoints failed, skipping: %s", result.err.Error())
 				continue
 			}
 
 			if result.res.StatusCode != http.StatusOK {
-				jwksLogger.Errorf("one of the jwks endpoints returned non-200, skipping: %d", result.res.StatusCode)
+				writeLog("one of the jwks endpoints returned non-200, skipping: %d", result.res.StatusCode)
 				continue
 			}
 
 			bodyBytes, err := ioutil.ReadAll(result.res.Body)
 			if err != nil {
 				result.res.Body.Close()
-				jwksLogger.Errorf("unable to read body, skipping: %s", err)
+				writeLog("unable to read body, skipping: %s", err.Error())
 				continue
 			}
 			result.res.Body.Close()
@@ -89,16 +120,18 @@ func MergeJWKS(w http.ResponseWriter, r *http.Request) {
 			mergedJWKSObject.Keys = append(mergedJWKSObject.Keys, keys...)
 		}
 
-		goCache.Set("jwks_uri", mergedJWKSObject, 60*time.Minute)
+		db.Set("jwks_uri", mergedJWKSObject, 60*time.Minute)
 	}
 
 	if found {
 		mergedJWKSObject = jwksUri.(jsonWebKeys)
 	}
 
-	resBytes, _ := json.Marshal(mergedJWKSObject)
-	w.WriteHeader(http.StatusOK)
-	w.Write(resBytes)
+	return func(w http.ResponseWriter, r *http.Request) {
+		resBytes, _ := json.Marshal(mergedJWKSObject)
+		w.WriteHeader(http.StatusOK)
+		w.Write(resBytes)
+	}
 }
 
 func TranslateJWKSet(in *jose.JSONWebKeySet) []jwksTmpl {
@@ -134,28 +167,11 @@ func TranslateJWKSet(in *jose.JSONWebKeySet) []jwksTmpl {
 	return keys
 }
 
-func writeInternalServerError(w http.ResponseWriter, err error) {
-	if err != nil {
-		jwksLogger.Errorf("plugin error: %s", err.Error())
-	}
-	w.WriteHeader(http.StatusInternalServerError)
-	w.Write([]byte(http.StatusText(http.StatusInternalServerError)))
-}
-
-func getJWKSfromAPiDef(configData map[string]interface{}) ([]string, error) {
-	jwkViper := viper.New()
-	if err := jwkViper.MergeConfigMap(configData); err != nil {
-		return nil, err
-	}
-
-	return jwkViper.GetStringSlice("merge_jwks"), nil
-}
-
 // a struct to hold the result from each request including an index
 // which will be used for sorting the results after they come in
 type result struct {
 	index int
-	res   http.Response
+	res   *http.Response
 	err   error
 }
 
@@ -164,7 +180,6 @@ type result struct {
 // is always concurrent up to the concurrency limit
 // src: https://gist.github.com/montanaflynn/ea4b92ed640f790c4b9cee36046a5383
 func boundedParallelGet(urls []string, concurrencyLimit int) []result {
-
 	// this buffered channel will block at the concurrency limit
 	semaphoreChan := make(chan struct{}, concurrencyLimit)
 
@@ -192,7 +207,7 @@ func boundedParallelGet(urls []string, concurrencyLimit int) []result {
 			// along with the index so we can sort them later along with
 			// any error that might have occoured
 			res, err := http.Get(url)
-			result := &result{i, *res, err}
+			result := &result{i, res, err}
 
 			// now we can send the result struct through the resultsChan
 			resultsChan <- result
@@ -228,5 +243,3 @@ func boundedParallelGet(urls []string, concurrencyLimit int) []result {
 	// now we're done we return the results
 	return results
 }
-
-func main() {}

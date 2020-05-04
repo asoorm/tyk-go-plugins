@@ -1,16 +1,20 @@
 # Merge multiple jwks_uri's
 
-> This plugin is experimental
+> This microservice is experimental & subject to breaking changes
 
-## Compilation
+## Motivation
 
-```text
-# Compile Plugin: 
-go build -buildmode=plugin -o ./build/merge_jwks.so .
+- merge the public certificates of multiple identity providers?
+- create x5c certificates from n (modulus) & e (exponent) from JWK if not supplied by the IdP
 
-# Compile Gateway:
-go install -tags 'goplugin'
-```
+## Usage
+
+- Modify the config.yaml for your use-case
+- Run the microservice
+
+## Todo
+
+- Publish to dockerhub to make it easier to run in a dockerized environment
 
 [6.3.1.1. "n" (modulus) parameter](https://tools.ietf.org/html/rfc7518#section-6.3.1.1)
 ```text
