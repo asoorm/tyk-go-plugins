@@ -1,13 +1,8 @@
 package main
 
 import (
-	"bytes"
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/base64"
-	"encoding/binary"
 	"encoding/json"
-	"strings"
+	"strconv"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -19,7 +14,7 @@ type testStruct struct {
 	Out jsonWebKeys
 }
 
-var test = testStruct{
+var testcases = []testStruct{{
 	In: []byte(`{
   "keys": [
     {
@@ -47,69 +42,58 @@ var test = testStruct{
 			},
 		},
 	},
+},
+	{
+		In: []byte(`{
+  "keys": [
+    {
+      "kty": "RSA",
+      "alg": "RS256",
+      "kid": "V1y7y0M7B6rdA0MXWgPj6bYEb3Md2mXULcU_IvL2URM",
+      "use": "sig",
+      "e": "AQAB",
+      "n": "nZPtrhV6ernRxuPI-Sz6kdFRXJR0CFx03UmBHzh0gDpwYsudnY-0AIxxVYAf3kDAhS9qhjVsVio-W7A3IXPlCmuQfDGmpc5vlUfIPgTAuAxt9zY3udk8dNdWY68YzFGSLpuQfCV8uIpwJJxapNjJn5VkVEEh2-b0t-JDPqcO023-0y-mxp4v7UV5Ddv-YfOtxbAKYlKwiConORpuQD-g-is_FZynm4mxSKbb59MKtwIfcjxllDafwNOq4g3TZBXTnqM42I-RpEwyIV5TGaZ2jEJVm9VpXQEgUW2wPDIPfyY1Ie3FrRfMSzTL8efhW74Wa6wPj2njPUqT6-16v0XBBQ"
+    }
+  ]
+}`),
+		Out: jsonWebKeys{
+			Keys: []jwksTmpl{
+				{
+					Kid: "V1y7y0M7B6rdA0MXWgPj6bYEb3Md2mXULcU_IvL2URM",
+					Kty: "RSA",
+					Alg: "RS256",
+					Use: "sig",
+					N:   "nZPtrhV6ernRxuPI-Sz6kdFRXJR0CFx03UmBHzh0gDpwYsudnY-0AIxxVYAf3kDAhS9qhjVsVio-W7A3IXPlCmuQfDGmpc5vlUfIPgTAuAxt9zY3udk8dNdWY68YzFGSLpuQfCV8uIpwJJxapNjJn5VkVEEh2-b0t-JDPqcO023-0y-mxp4v7UV5Ddv-YfOtxbAKYlKwiConORpuQD-g-is_FZynm4mxSKbb59MKtwIfcjxllDafwNOq4g3TZBXTnqM42I-RpEwyIV5TGaZ2jEJVm9VpXQEgUW2wPDIPfyY1Ie3FrRfMSzTL8efhW74Wa6wPj2njPUqT6-16v0XBBQ",
+					E:   "AQAB",
+					X5C: []string{
+						"MIIBCgKCAQEAnZPtrhV6ernRxuPI+Sz6kdFRXJR0CFx03UmBHzh0gDpwYsudnY+0AIxxVYAf3kDAhS9qhjVsVio+W7A3IXPlCmuQfDGmpc5vlUfIPgTAuAxt9zY3udk8dNdWY68YzFGSLpuQfCV8uIpwJJxapNjJn5VkVEEh2+b0t+JDPqcO023+0y+mxp4v7UV5Ddv+YfOtxbAKYlKwiConORpuQD+g+is/FZynm4mxSKbb59MKtwIfcjxllDafwNOq4g3TZBXTnqM42I+RpEwyIV5TGaZ2jEJVm9VpXQEgUW2wPDIPfyY1Ie3FrRfMSzTL8efhW74Wa6wPj2njPUqT6+16v0XBBQIDAQAB",
+					},
+				},
+			},
+		},
+	},
 }
 
 func TestTranslateJWKSet(t *testing.T) {
 
-	t1 := &jose.JSONWebKeySet{}
-	json.Unmarshal(test.In, t1)
+	for i, tt := range testcases {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			t1 := &jose.JSONWebKeySet{}
+			json.Unmarshal(tt.In, t1)
 
-	translated := TranslateJWKSet(t1)
+			translated := TranslateJWKSet(t1)
 
-	if !cmp.Equal(test.Out.Keys[0], translated[0]) {
-		t.Log("test.Out != translated[0]")
+			if !cmp.Equal(tt.Out.Keys[0], translated[0]) {
+				t.Log("test.Out != translated[0]")
 
-		testOutBytes, _ := json.Marshal(test.Out.Keys[0])
-		newJwksBytes, _ := json.Marshal(translated[0])
+				testOutBytes, _ := json.Marshal(tt.Out.Keys[0])
+				newJwksBytes, _ := json.Marshal(translated[0])
 
-		t.Log("exp: ", string(testOutBytes))
-		t.Log("got: ", string(newJwksBytes))
+				t.Log("exp: ", string(testOutBytes))
+				t.Log("got: ", string(newJwksBytes))
 
-		t.Fail()
-	}
-}
-
-func TestUnmarshalMarshal(t *testing.T) {
-	jsonWebKeySet := &jose.JSONWebKeySet{}
-
-	if err := json.Unmarshal(test.In, jsonWebKeySet); err != nil {
-		t.Logf("failed unmarshalling JWKS: %s", err.Error())
-		t.FailNow()
-	}
-
-	newJwks := jsonWebKeys{}
-	for _, v := range jsonWebKeySet.Keys {
-		switch key := v.Key.(type) {
-		case *rsa.PublicKey:
-			x509Bytes := x509.MarshalPKCS1PublicKey(key)
-
-			// make a big enough byte slice
-			e := make([]byte, 8)
-			// fill it
-			binary.BigEndian.PutUint64(e, uint64(key.E))
-			// trim buffer of null values
-			e = bytes.TrimLeft(e, "\x00")
-
-			newJwks.Keys = append(newJwks.Keys, jwksTmpl{
-				Kid: v.KeyID,
-				Kty: "RSA",
-				Alg: v.Algorithm,
-				Use: v.Use,
-				N:   strings.TrimRight(base64.URLEncoding.EncodeToString(key.N.Bytes()), "="),
-				E:   strings.TrimRight(base64.URLEncoding.EncodeToString(e), "="),
-				X5C: []string{strings.TrimRight(base64.StdEncoding.EncodeToString(x509Bytes), "=")},
-			})
-		}
-
-		testOutBytes, _ := json.Marshal(test.Out)
-		newJwksBytes, _ := json.Marshal(newJwks)
-
-		t.Log("exp: ", string(testOutBytes))
-		t.Log("got: ", string(newJwksBytes))
-
-		if !cmp.Equal(test.Out, newJwks) {
-			t.Log("test.Out != newJwks")
-			t.Fail()
-		}
+				t.FailNow()
+			}
+		})
 	}
 }
