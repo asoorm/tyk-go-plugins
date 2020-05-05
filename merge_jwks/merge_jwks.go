@@ -39,7 +39,7 @@ type jsonWebKeys struct {
 }
 
 var (
-	db = cache.New(60*time.Minute, time.Minute)
+	db = cache.New(5*time.Minute, time.Minute)
 )
 
 type conf struct {
@@ -117,7 +117,10 @@ func MergeJWKSHandler(jwksUris []string) http.HandlerFunc {
 			jsonWebKeySetJOSE := &jose.JSONWebKeySet{}
 			json.Unmarshal(bodyBytes, jsonWebKeySetJOSE)
 
-			keys := TranslateJWKSet(jsonWebKeySetJOSE)
+			keys, err := TranslateJWKSet(jsonWebKeySetJOSE)
+			if err != nil {
+				writeLog("error: ", err.Error())
+			}
 
 			mergedJWKSObject.Keys = append(mergedJWKSObject.Keys, keys...)
 		}
@@ -131,12 +134,13 @@ func MergeJWKSHandler(jwksUris []string) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		resBytes, _ := json.Marshal(mergedJWKSObject)
+		w.Header().Set("content-type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write(resBytes)
 	}
 }
 
-func TranslateJWKSet(in *jose.JSONWebKeySet) []jwksTmpl {
+func TranslateJWKSet(in *jose.JSONWebKeySet) ([]jwksTmpl, error) {
 	var keys []jwksTmpl
 	for _, v := range in.Keys {
 		switch key := v.Key.(type) {
@@ -145,7 +149,8 @@ func TranslateJWKSet(in *jose.JSONWebKeySet) []jwksTmpl {
 			if v.Use != "sig" {
 				continue
 			}
-			x509Bytes := x509.MarshalPKCS1PublicKey(key)
+
+			x509Bytes, _ := x509.MarshalPKIXPublicKey(key)
 
 			block := &pem.Block{
 				Bytes: x509Bytes,
@@ -154,6 +159,7 @@ func TranslateJWKSet(in *jose.JSONWebKeySet) []jwksTmpl {
 			buf := new(bytes.Buffer)
 			if err := pem.Encode(buf, block); err != nil {
 				writeLog("problem pem encoding block: %s", err.Error())
+				continue
 			}
 
 			rawB64 := ""
@@ -162,6 +168,7 @@ func TranslateJWKSet(in *jose.JSONWebKeySet) []jwksTmpl {
 				rawB64 += s.Text()
 			}
 
+			// strip headers
 			rawB64 = rawB64[16 : len(rawB64)-14]
 
 			// make a big enough byte slice
@@ -183,7 +190,7 @@ func TranslateJWKSet(in *jose.JSONWebKeySet) []jwksTmpl {
 		}
 	}
 
-	return keys
+	return keys, nil
 }
 
 // a struct to hold the result from each request including an index
