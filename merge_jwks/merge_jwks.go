@@ -39,7 +39,7 @@ type jsonWebKeys struct {
 }
 
 var (
-	db = cache.New(60*time.Minute, time.Minute)
+	db = cache.New(5*time.Minute, time.Minute)
 )
 
 type conf struct {
@@ -134,6 +134,7 @@ func MergeJWKSHandler(jwksUris []string) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		resBytes, _ := json.Marshal(mergedJWKSObject)
+		w.Header().Set("content-type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write(resBytes)
 	}
