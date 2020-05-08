@@ -21,7 +21,8 @@ RUN cd /go/src/github.com/asoorm/tyk-go-plugins && \
     echo "commit: $GIT_COMMIT" && \
     export GIT_TAG=$(git tag) && \
     echo "tag: $GIT_TAG" && \
-    cd merge_jwks && go install -ldflags "-X main.GitCommit=$GIT_COMMIT -X main.GitTag=$GIT_TAG" -a -i -ldflags="-s -w" .
+    cd merge_jwks && \
+    go install -ldflags="-X 'main.GitCommit=${GIT_COMMIT' -X 'main.GitTag=$GIT_TAG"' -a -i -ldflags="-s -w" .
 
 FROM alpine:3.11
 RUN apk --no-cache add ca-certificates && \
