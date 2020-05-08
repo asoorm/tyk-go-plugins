@@ -5,5 +5,5 @@ echo $VERSION
 
 git tag ${VERSION}
 git push -f --tags
-docker build --no-cache -t mangomm/${VERSION} --build-arg version=${VERSION} .
-#docker push mangomm/${VERSION}
+docker build --no-cache -t mangomm/merge-jwks:${VERSION#"merge-jwks-"} --build-arg version=${VERSION} .
+docker push mangomm/${VERSION#"merge-jwks-"}
