@@ -42,7 +42,14 @@ type conf struct {
 	Merge   []string `mapstructure:"merge"`
 }
 
+var GitTag string
+var GitCommit string
+
 func main() {
+	writeLog("Build information:")
+	writeLog("\tcommit: %s", GitCommit)
+	writeLog("\ttag: %s", GitTag)
+
 	vConf := viper.New()
 	vConf.SetConfigType("yaml")
 	vConf.SetConfigFile("config.yaml")
