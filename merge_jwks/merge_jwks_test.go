@@ -12,7 +12,7 @@ import (
 
 type testStruct struct {
 	In  []byte
-	Out jsonWebKeys
+	Out jwksUriResponse
 }
 
 var testcases = []testStruct{
@@ -29,7 +29,7 @@ var testcases = []testStruct{
     }
   ]
 }`),
-		Out: jsonWebKeys{
+		Out: jwksUriResponse{
 			Keys: []jwksTmpl{
 				{
 					Kid: "L_OIax5OnVSaZL0Rkikdo6_4z7CttymiBxGhdizUQP0",
@@ -63,7 +63,7 @@ var testcases = []testStruct{
     }
   ]
 }`),
-		Out: jsonWebKeys{
+		Out: jwksUriResponse{
 			Keys: []jwksTmpl{
 				{
 					Kid: "L_OIax5OnVSaZL0Rkikdo6_4z7CttymiBxGhdizUQP0",
@@ -92,7 +92,7 @@ var testcases = []testStruct{
     }
   ]
 }`),
-		Out: jsonWebKeys{
+		Out: jwksUriResponse{
 			Keys: []jwksTmpl{
 				{
 					Kid: "V1y7y0M7B6rdA0MXWgPj6bYEb3Md2mXULcU_IvL2URM",

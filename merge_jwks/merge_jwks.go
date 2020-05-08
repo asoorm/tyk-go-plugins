@@ -17,9 +17,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
-	"time"
 
-	"github.com/patrickmn/go-cache"
 	"github.com/spf13/viper"
 	"github.com/square/go-jose"
 )
@@ -34,13 +32,9 @@ type jwksTmpl struct {
 	X5C []string `json:"x5c,omitempty"`
 }
 
-type jsonWebKeys struct {
+type jwksUriResponse struct {
 	Keys []jwksTmpl `json:"keys"`
 }
-
-var (
-	db = cache.New(5*time.Minute, time.Minute)
-)
 
 type conf struct {
 	Address string   `mapstructure:"address"`
@@ -88,48 +82,39 @@ func writeLog(format string, args ...interface{}) {
 
 func MergeJWKSHandler(jwksUris []string) http.HandlerFunc {
 
-	var mergedJWKSObject jsonWebKeys
-	jwksUri, found := db.Get("jwks_uri")
-	if !found {
-		// limit concurrency to the number of CPUs
-		resultArray := boundedParallelGet(jwksUris, runtime.NumCPU())
+	var mergedJWKSObject jwksUriResponse
+	// limit concurrency to the number of CPUs
+	resultArray := boundedParallelGet(jwksUris, runtime.NumCPU())
 
-		for _, result := range resultArray {
-			if result.err != nil {
-				// log the error and continue to the next one
-				writeLog("one of the jwks endpoints failed, skipping: %s", result.err.Error())
-				continue
-			}
-
-			if result.res.StatusCode != http.StatusOK {
-				writeLog("one of the jwks endpoints returned non-200, skipping: %d", result.res.StatusCode)
-				continue
-			}
-
-			bodyBytes, err := ioutil.ReadAll(result.res.Body)
-			if err != nil {
-				result.res.Body.Close()
-				writeLog("unable to read body, skipping: %s", err.Error())
-				continue
-			}
-			result.res.Body.Close()
-
-			jsonWebKeySetJOSE := &jose.JSONWebKeySet{}
-			json.Unmarshal(bodyBytes, jsonWebKeySetJOSE)
-
-			keys, err := TranslateJWKSet(jsonWebKeySetJOSE)
-			if err != nil {
-				writeLog("error: ", err.Error())
-			}
-
-			mergedJWKSObject.Keys = append(mergedJWKSObject.Keys, keys...)
+	for _, result := range resultArray {
+		if result.err != nil {
+			// log the error and continue to the next one
+			writeLog("one of the jwks endpoints failed, skipping: %s", result.err.Error())
+			continue
 		}
 
-		db.Set("jwks_uri", mergedJWKSObject, 60*time.Minute)
-	}
+		if result.res.StatusCode != http.StatusOK {
+			writeLog("one of the jwks endpoints returned non-200, skipping: %d", result.res.StatusCode)
+			continue
+		}
 
-	if found {
-		mergedJWKSObject = jwksUri.(jsonWebKeys)
+		bodyBytes, err := ioutil.ReadAll(result.res.Body)
+		if err != nil {
+			result.res.Body.Close()
+			writeLog("unable to read body, skipping: %s", err.Error())
+			continue
+		}
+		result.res.Body.Close()
+
+		jsonWebKeySetJOSE := &jose.JSONWebKeySet{}
+		json.Unmarshal(bodyBytes, jsonWebKeySetJOSE)
+
+		keys, err := TranslateJWKSet(jsonWebKeySetJOSE)
+		if err != nil {
+			writeLog("error: ", err.Error())
+		}
+
+		mergedJWKSObject.Keys = append(mergedJWKSObject.Keys, keys...)
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
