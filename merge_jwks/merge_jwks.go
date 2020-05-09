@@ -64,7 +64,7 @@ func main() {
 		fatalOnError(errors.New("no jwks_uris in merge array"), "merge array validation error")
 	}
 
-	http.Handle(appConf.JWKSUri, MergeJWKSHandler(appConf.Merge))
+	http.HandleFunc(appConf.JWKSUri, MergeJWKSHandler(appConf.Merge))
 
 	writeLog("starting server on: %s", appConf.Address)
 	err = http.ListenAndServe(":9000", nil)
@@ -89,42 +89,42 @@ func writeLog(format string, args ...interface{}) {
 
 func MergeJWKSHandler(jwksUris []string) http.HandlerFunc {
 
-	var mergedJWKSObject jwksUriResponse
-	// limit concurrency to the number of CPUs
-	resultArray := boundedParallelGet(jwksUris, runtime.NumCPU())
-
-	for _, result := range resultArray {
-		if result.err != nil {
-			// log the error and continue to the next one
-			writeLog("one of the jwks endpoints failed, skipping: %s", result.err.Error())
-			continue
-		}
-
-		if result.res.StatusCode != http.StatusOK {
-			writeLog("one of the jwks endpoints returned non-200, skipping: %d", result.res.StatusCode)
-			continue
-		}
-
-		bodyBytes, err := ioutil.ReadAll(result.res.Body)
-		if err != nil {
-			result.res.Body.Close()
-			writeLog("unable to read body, skipping: %s", err.Error())
-			continue
-		}
-		result.res.Body.Close()
-
-		jsonWebKeySetJOSE := &jose.JSONWebKeySet{}
-		json.Unmarshal(bodyBytes, jsonWebKeySetJOSE)
-
-		keys, err := TranslateJWKSet(jsonWebKeySetJOSE)
-		if err != nil {
-			writeLog("error: ", err.Error())
-		}
-
-		mergedJWKSObject.Keys = append(mergedJWKSObject.Keys, keys...)
-	}
-
 	return func(w http.ResponseWriter, r *http.Request) {
+		var mergedJWKSObject jwksUriResponse
+		// limit concurrency to the number of CPUs
+		resultArray := boundedParallelGet(jwksUris, runtime.NumCPU())
+
+		for _, result := range resultArray {
+			if result.err != nil {
+				// log the error and continue to the next one
+				writeLog("one of the jwks endpoints failed, skipping: %s", result.err.Error())
+				continue
+			}
+
+			if result.res.StatusCode != http.StatusOK {
+				writeLog("one of the jwks endpoints returned non-200, skipping: %d", result.res.StatusCode)
+				continue
+			}
+
+			bodyBytes, err := ioutil.ReadAll(result.res.Body)
+			if err != nil {
+				result.res.Body.Close()
+				writeLog("unable to read body, skipping: %s", err.Error())
+				continue
+			}
+			result.res.Body.Close()
+
+			jsonWebKeySetJOSE := &jose.JSONWebKeySet{}
+			json.Unmarshal(bodyBytes, jsonWebKeySetJOSE)
+
+			keys, err := TranslateJWKSet(jsonWebKeySetJOSE)
+			if err != nil {
+				writeLog("error: ", err.Error())
+			}
+
+			mergedJWKSObject.Keys = append(mergedJWKSObject.Keys, keys...)
+		}
+
 		resBytes, _ := json.Marshal(mergedJWKSObject)
 		w.Header().Set("content-type", "application/json")
 		w.WriteHeader(http.StatusOK)
