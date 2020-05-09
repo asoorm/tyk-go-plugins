@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export VERSION=merge-jwks-0.5
+export VERSION=merge-jwks-0.6
 echo $VERSION
 
 git tag ${VERSION}
