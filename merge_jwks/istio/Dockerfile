@@ -25,14 +25,12 @@ RUN cd /go/src/github.com/asoorm/tyk-go-plugins && \
     go build -ldflags="-X 'main.GitCommit=${GIT_COMMIT}' -X 'main.GitTag=${GIT_TAG}' -s -w" -a -i .
 
 FROM alpine:3.11
-RUN apk --no-cache add ca-certificates && \
+RUN apk --no-cache add ca-certificates curl && \
     adduser -D -g merge_jwks merge_jwks
 USER merge_jwks
 WORKDIR /opt/merge_jwks
 COPY --from=build /go/src/github.com/asoorm/tyk-go-plugins/merge_jwks/merge_jwks /opt/merge_jwks/merge_jwks
 COPY config.yaml /opt/merge_jwks/config.yaml
 USER merge_jwks
-
 EXPOSE 9000
-
-CMD ["./merge_jwks"]
+ENTRYPOINT ["/bin/sh","-c","while ( ! test $(curl -s --max-time 5 -o /dev/stderr -w  \"%{http_code}\" ifconfig.me | cat) -eq 200); do date; sleep 2; done && exec ./merge_jwks"]

@@ -1,0 +1,17 @@
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  namespace: "{{ .Values.jwks.namespace }}"
+  name: jwks
+  labels:
+    service: jwks
+    release: "jwks"
+    app: jwks
+spec:
+  maxReplicas: 10
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: jwks
+  targetCPUUtilizationPercentage: 80
