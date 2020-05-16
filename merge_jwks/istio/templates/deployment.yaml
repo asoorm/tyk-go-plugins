@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jwks
+  namespace: "{{ .Values.jwks.namespace }}"
+  labels:
+    service: jwks
+    release: "jwks"
+    app: jwks
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: jwks
+      release: "jwks"
+      app: jwks
+  revisionHistoryLimit: 1
+  minReadySeconds: 30
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      name: jwks
+      labels:
+        service: jwks
+        release: "jwks"
+        app: jwks
+    spec:
+      containers:
+      - name: jwks
+        image: "{{ .Values.jwks.dockerimage }}"
+        imagePullPolicy: "Always"
+        resources:
+          requests:
+            memory: 256Mi
+            cpu: 0.5
+          limits:
+            cpu: 0.5
+        volumeMounts:
+          - mountPath: /opt/merge_jwks/config.yaml
+            name: config
+            subPath: config.yaml
+        ports:
+          - containerPort: 9000
+            name: http
+            port: 9000
+          - containerPort: 9000
+            name: http-health
+            port: 9000
+        livenessProbe:
+          tcpSocket:
+            port: 9000
+          failureThreshold: 3
+          initialDelaySeconds: 200
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 50
+        readinessProbe:
+          tcpSocket:
+            port: 9000
+          failureThreshold: 3
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 5
+      imagePullSecrets:
+      - name: "{{ .Values.jwks.pullsecrets }}"
+      volumes:
+      - name: config
+        configMap:
+          name: jwks

@@ -1,0 +1,16 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: vs-jwks
+  namespace: "{{ .Values.jwks.namespace }}"
+spec:
+  gateways:
+  - private-ingressgateway #this needs to be your ingress gateway 
+  hosts:
+  - jwks.bla.com  #this needs to be your url 
+  http:
+  - route:
+    - destination:
+        host: jwks.private.svc.cluster.local #this needs to be your k8s service name.namespace.svc.cluster.local
+        port:
+          number: 80

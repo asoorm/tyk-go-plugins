@@ -1,0 +1,12 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: jwks
+  namespace: "{{ .Values.jwks.namespace }}"
+data:
+  config.yaml: |-
+    address: ":9000"
+    jwks_uri: "/certs"
+    merge:
+      - "https://{oktaorg}.okta.com/oauth2/default/v1/keys"
+      - "https://{keycloak-host}/auth/realms/{keycloak-realm}/protocol/openid-connect/certs"

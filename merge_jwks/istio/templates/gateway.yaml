@@ -1,0 +1,18 @@
+apiVersion: v1
+items:
+- apiVersion: networking.istio.io/v1alpha3
+  kind: Gateway
+  metadata:
+    name: private-ingressgateway # your gw name
+    namespace: "{{ .Values.jwks.namespace }}"
+  spec:
+    selector:
+      app: private-istio-ingressgateway #this needs to be your ingress gateway 
+    servers:
+    - hosts:
+      - test.bla.com  #this needs to be your url 
+      port:
+        name: http
+        number: 80
+        protocol: HTTP
+kind: List
