@@ -34,10 +34,10 @@ func init() {
 		// TODO: make API call and discover this stuff
 		UpstreamIdP: oauth2.Config{
 			ClientID:     "tyk-gateway",
-			ClientSecret: "744215b1-3f6b-494b-bf47-2cd0d38dae10",
+			ClientSecret: "SOMESECRET",
 			Endpoint:     oauth2.Endpoint{
-				AuthURL:   "https://keycloak.do.poc.tyk.technology/auth/realms/tyk/protocol/openid-connect/auth",
-				TokenURL:  "https://keycloak.do.poc.tyk.technology/auth/realms/tyk/protocol/openid-connect/token",
+				AuthURL:   "https://IDP/auth",
+				TokenURL:  "https://IDP/token",
 				AuthStyle: oauth2.AuthStyleInParams,
 			},
 			RedirectURL:  "http://gateway.ahmet:8080/auth/callback",
