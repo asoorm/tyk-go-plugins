@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/TykTechnologies/tyk/log"
 	"github.com/asoorm/tyk-go-plugins/relying_party/handler"
 	"github.com/asoorm/tyk-go-plugins/relying_party/model"
 	"github.com/gorilla/mux"
+	"golang.org/x/oauth2"
 	"net/http"
 )
 
@@ -15,7 +15,7 @@ var (
 func init() {
 
 	conf := model.Conf{
-		Logger: log.Get(),
+		//Logger: log.Get(),
 		Storage: model.Storage{
 			Address:  "127.0.0.1:6379",
 			Password: "",
@@ -24,7 +24,7 @@ func init() {
 		GatewayClient: model.GatewayClient{
 			ClientID:     "tyk-gateway",
 			ClientSecret: "SOMESECRET",
-			RedirectURI:  "http://gateway.ahmet:8080/auth/callback",
+			//RedirectURI:  "http://gateway.ahmet:8080/auth/callback",
 			Discovery: model.DiscoveryMeta{
 				AuthorizationEndpoint: "http://gateway.ahmet:8080/auth/auth",
 				TokenEndpoint:         "http://gateway.ahmet:8080/auth/token",
@@ -32,10 +32,16 @@ func init() {
 			},
 		},
 		// TODO: make API call and discover this stuff
-		UpstreamIdP: model.DiscoveryMeta{
-			Issuer:                "https://IDP_ISSUER",
-			AuthorizationEndpoint: "https://IDP_AUTH",
-			TokenEndpoint:         "https://IDP_TOKEN",
+		UpstreamIdP: oauth2.Config{
+			ClientID:     "tyk-gateway",
+			ClientSecret: "744215b1-3f6b-494b-bf47-2cd0d38dae10",
+			Endpoint:     oauth2.Endpoint{
+				AuthURL:   "https://keycloak.do.poc.tyk.technology/auth/realms/tyk/protocol/openid-connect/auth",
+				TokenURL:  "https://keycloak.do.poc.tyk.technology/auth/realms/tyk/protocol/openid-connect/token",
+				AuthStyle: oauth2.AuthStyleInParams,
+			},
+			RedirectURL:  "http://gateway.ahmet:8080/auth/callback",
+			Scopes:       []string{"openid", "email", "profile"},
 		},
 	}
 
