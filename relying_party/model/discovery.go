@@ -2,17 +2,17 @@ package model
 
 import (
 	"context"
+	"golang.org/x/oauth2"
 
 	"github.com/go-redis/redis/v8"
-	"github.com/sirupsen/logrus"
 )
 
 type Conf struct {
-	Logger        *logrus.Logger
+	//Logger        *logrus.Logger
 	Storage       Storage
 	BaseURL       string
 	GatewayClient GatewayClient
-	UpstreamIdP   DiscoveryMeta
+	UpstreamIdP   oauth2.Config
 }
 
 type GatewayClient struct {

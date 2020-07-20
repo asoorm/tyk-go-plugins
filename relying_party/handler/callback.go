@@ -14,7 +14,7 @@ import (
 
 func (h *Handler) Callback() http.HandlerFunc {
 
-	log := h.DI.Conf.Logger.WithField("path", "/callback")
+	//log := h.DI.Conf.Logger.WithField("path", "/callback")
 	db := h.DI.DB
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -25,7 +25,7 @@ func (h *Handler) Callback() http.HandlerFunc {
 		}
 		println(string(dump))
 
-		log.Info("query: ", r.URL.String())
+		//log.Info("query: ", r.URL.String())
 
 		authorizationCode := r.URL.Query().Get("code")
 		state := r.URL.Query().Get("state")
@@ -34,7 +34,7 @@ func (h *Handler) Callback() http.HandlerFunc {
 			// write an error log
 			// Redirect to login page
 
-			log.Error("missing authorization code or state")
+			//log.Error("missing authorization code or state")
 
 			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte(http.StatusText(http.StatusNotFound)))

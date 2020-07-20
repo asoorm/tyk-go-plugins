@@ -1,15 +1,14 @@
 module github.com/asoorm/tyk-go-plugins/relying_party
 
-go 1.14
+go 1.12
 
 require (
-	github.com/TykTechnologies/tyk v2.9.4+incompatible
 	github.com/go-redis/redis/v8 v8.0.0-beta.6
 	github.com/gorilla/mux v1.7.4
 	github.com/gorilla/schema v1.1.0
-	github.com/hashicorp/terraform v0.12.28 // indirect
-	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
-	github.com/sirupsen/logrus v1.6.0
-	github.com/x-cray/logrus-prefixed-formatter v0.5.2 // indirect
+	golang.org/x/lint v0.0.0-20190313153728-d0100b6bd8b3 // indirect
+	golang.org/x/net v0.0.0-20200202094626-16171245cfb2 // indirect
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+	google.golang.org/appengine v1.6.1 // indirect
+	honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc // indirect
 )
