@@ -45,6 +45,7 @@ func (h *Handler) Callback() http.HandlerFunc {
 		// get the original authorization request
 		authReq, err := db.Get(context.Background(), "auth_request:"+state).Result()
 		if err != nil {
+			// TODO: maybe the request timed out... probably better to redirect to the initial login
 			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte(http.StatusText(http.StatusNotFound)))
 			return

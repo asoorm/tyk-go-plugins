@@ -1,11 +1,12 @@
 package main
 
 import (
+	"net/http"
+
 	"github.com/asoorm/tyk-go-plugins/relying_party/handler"
 	"github.com/asoorm/tyk-go-plugins/relying_party/model"
 	"github.com/gorilla/mux"
 	"golang.org/x/oauth2"
-	"net/http"
 )
 
 var (
@@ -23,7 +24,7 @@ func init() {
 		},
 		GatewayClient: model.GatewayClient{
 			ClientID:     "tyk-gateway",
-			ClientSecret: "SOMESECRET",
+			ClientSecret: "0dc01514-750b-4b36-bc72-281c60d1324e",
 			//RedirectURI:  "http://gateway.ahmet:8080/auth/callback",
 			Discovery: model.DiscoveryMeta{
 				AuthorizationEndpoint: "http://gateway.ahmet:8080/auth/auth",
@@ -34,14 +35,14 @@ func init() {
 		// TODO: make API call and discover this stuff
 		UpstreamIdP: oauth2.Config{
 			ClientID:     "tyk-gateway",
-			ClientSecret: "SOMESECRET",
-			Endpoint:     oauth2.Endpoint{
-				AuthURL:   "https://IDP/auth",
-				TokenURL:  "https://IDP/token",
+			ClientSecret: "0dc01514-750b-4b36-bc72-281c60d1324e",
+			Endpoint: oauth2.Endpoint{
+				AuthURL:   "https://keycloak.do.poc.tyk.technology/auth/realms/tyk/protocol/openid-connect/auth",
+				TokenURL:  "https://keycloak.do.poc.tyk.technology/auth/realms/tyk/protocol/openid-connect/token",
 				AuthStyle: oauth2.AuthStyleInParams,
 			},
-			RedirectURL:  "http://gateway.ahmet:8080/auth/callback",
-			Scopes:       []string{"openid", "email", "profile"},
+			RedirectURL: "http://gateway.ahmet:8080/auth/callback",
+			Scopes:      []string{"openid", "email", "profile", "transactions"},
 		},
 	}
 

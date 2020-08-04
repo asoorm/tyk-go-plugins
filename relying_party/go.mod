@@ -3,6 +3,7 @@ module github.com/asoorm/tyk-go-plugins/relying_party
 go 1.12
 
 require (
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/go-redis/redis/v8 v8.0.0-beta.6
 	github.com/gorilla/mux v1.7.4
 	github.com/gorilla/schema v1.1.0

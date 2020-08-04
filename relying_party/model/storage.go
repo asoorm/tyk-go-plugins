@@ -6,4 +6,5 @@ type AuthorizationRequest struct {
 	ResponseType string `json:"response_type"`
 	RedirectURI  string `json:"redirect_uri"`
 	State        string `json:"state"`
+	Scope        string `json:"scope"`
 }

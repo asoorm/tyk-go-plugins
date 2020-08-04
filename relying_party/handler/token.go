@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
@@ -59,29 +58,26 @@ func (h *Handler) Token() http.HandlerFunc {
 			return
 		}
 
-		var errCollector []error
-
+		var errCollector []string
 		if tokenRequest.ClientID != authorizationRequest.ClientID {
-			errCollector = append(errCollector, errors.New("wrong client id"))
+			errCollector = append(errCollector, "wrong client id")
 		}
 
 		if tokenRequest.RedirectURI != authorizationRequest.RedirectURI {
-			errCollector = append(errCollector, errors.New("wrong redirect uri"))
+			errCollector = append(errCollector, "wrong redirect uri")
 		}
 
-		if tokenRequest.RedirectURI != authorizationRequest.RedirectURI {
-			errCollector = append(errCollector, errors.New("wrong client secret"))
-		}
-
-		if tokenRequest.ClientSecret != "bar" {
-			errCollector = append(errCollector, errors.New("wrong client secret"))
+		if tokenRequest.ClientSecret != authorizationRequest.ClientSecret {
+			errCollector = append(errCollector, "wrong client secret")
 		}
 
 		if tokenRequest.GrantType != "authorization_code" {
-			errCollector = append(errCollector, errors.New("wrong grant_type"))
+			errCollector = append(errCollector, "wrong grant_type")
 		}
 
 		if len(errCollector) > 0 {
+			errorsJson, _ := json.Marshal(errCollector)
+			println(fmt.Sprintf("errors: %s", string(errorsJson)))
 			//log.WithError(errors.New("token request error")).Errorf("%#v", errCollector)
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
